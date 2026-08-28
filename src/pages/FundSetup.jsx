@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { usePortfolio } from '../store/portfolioStore'
-import { computeTargetSum } from '../utils/portfolio'
+import { computeTargetSum, getFundColor } from '../utils/portfolio'
 
 function FundRow({ fund, onChange, onRemove }) {
   return (
@@ -8,10 +8,14 @@ function FundRow({ fund, onChange, onRemove }) {
       {/* Category Name */}
       <td className="ather-td">
         <div className="flex items-center gap-3">
-          <span
-            className="w-3.5 h-3.5 rounded-md flex-shrink-0 border border-white/30"
-            style={{ background: fund.color }}
-          />
+          <label className="relative flex-shrink-0 cursor-pointer w-6 h-6 rounded-md overflow-hidden border border-white/30" title="Choose color">
+            <input 
+              type="color" 
+              className="absolute -top-2 -left-2 w-10 h-10 cursor-pointer"
+              value={fund.color || getFundColor(fund.name || fund.id, 0)} 
+              onChange={e => onChange(fund.id, 'color', e.target.value)}
+            />
+          </label>
           <input
             id={`fund-name-${fund.id}`}
             className="ather-input font-sans text-base font-medium"

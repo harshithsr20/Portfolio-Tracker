@@ -62,7 +62,7 @@ export function enrichFunds(funds) {
     currentPct: computeCurrentPct(f, total),
     driftPct:   computeDrift(f, total),
     totalValue: total,
-    color: getFundColor(f.name || f.id, i),
+    color: f.color || getFundColor(f.name || f.id, i),
   }))
 }
 

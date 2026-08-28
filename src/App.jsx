@@ -1,16 +1,33 @@
-import { useState } from 'react'
-import { PortfolioProvider } from './store/portfolioStore'
+import { useState, useEffect } from 'react'
+import { onAuthStateChanged } from 'firebase/auth'
+import { auth, logoutUser } from './lib/firebase'
+import { PortfolioProvider, usePortfolio } from './store/portfolioStore'
 import Navbar from './components/Navbar'
 import Dashboard from './pages/Dashboard'
 import Allocator from './pages/Allocator'
 import FactSheets from './pages/FactSheets'
 import AiAnalyzer from './pages/AiAnalyzer'
 import MfData from './pages/MfData'
+import FundSetup from './pages/FundSetup'
+import Login from './pages/Login'
 
-function AppContent() {
+function AppContent({ user }) {
+  const { state } = usePortfolio()
+  const { funds } = state
   const [activePage, setActivePage] = useState('dashboard')
   const [targetFundForMfData, setTargetFundForMfData] = useState(null)
   const [targetFundForAnalyzer, setTargetFundForAnalyzer] = useState(null)
+  const [hasCheckedNewUser, setHasCheckedNewUser] = useState(false)
+
+  // Redirect to Fund Setup if new user (no funds)
+  useEffect(() => {
+    if (!hasCheckedNewUser) {
+      if (funds.length === 0) {
+        setActivePage('fundsetup')
+      }
+      setHasCheckedNewUser(true)
+    }
+  }, [funds.length, hasCheckedNewUser])
 
   const handleNavigateToMfData = (fundKey) => {
     setTargetFundForMfData(fundKey)
@@ -30,6 +47,7 @@ function AppContent() {
         {activePage === 'dashboard'  && <Dashboard />}
         {activePage === 'allocator'  && <Allocator />}
         {activePage === 'factsheets' && <FactSheets />}
+        {activePage === 'fundsetup'  && <FundSetup />}
         {activePage === 'aianalyzer' && (
           <AiAnalyzer 
             onNavigateToMfData={handleNavigateToMfData}
@@ -49,11 +67,16 @@ function AppContent() {
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-white"></span>
             <span className="text-white font-bold uppercase tracking-wider text-xs">PORTFOLIO TRACKER</span>
-            <span className="text-neutral-500">// Local Storage Edition</span>
+            <span className="text-neutral-500">// Firebase Edition</span>
           </div>
-          <p className="text-neutral-400 text-xs">
-            All data stored locally in your browser · Zero cloud dependencies · Automatic snapshot history
-          </p>
+          <div className="flex items-center gap-4">
+            <span className="text-neutral-400 text-xs">
+              Logged in as: {user.email}
+            </span>
+            <button onClick={logoutUser} className="text-rose-400 hover:text-rose-300 underline">
+              Logout
+            </button>
+          </div>
         </div>
       </footer>
     </div>
@@ -61,9 +84,36 @@ function AppContent() {
 }
 
 export default function App() {
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!auth) {
+      setLoading(false)
+      return
+    }
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser)
+      setLoading(false)
+    })
+    return () => unsubscribe()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#080808] text-white">
+        <div className="animate-pulse font-mono text-neutral-400 text-sm">Initializing Firebase Auth...</div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <Login />
+  }
+
   return (
-    <PortfolioProvider>
-      <AppContent />
+    <PortfolioProvider user={user}>
+      <AppContent user={user} />
     </PortfolioProvider>
   )
 }

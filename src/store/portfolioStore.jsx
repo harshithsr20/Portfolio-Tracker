@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useEffect } from 'react'
+import { createContext, useContext, useReducer, useEffect, useState } from 'react'
 
 const STORAGE_KEY = 'portfolio-tracker-v1'
 
@@ -25,6 +25,9 @@ const DEFAULT_STATE = {
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
+import { doc, getDoc, setDoc } from 'firebase/firestore'
+import { db } from '../lib/firebase'
+
 function loadFromStorage() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -40,6 +43,30 @@ function saveToStorage(state) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
   } catch (e) {
     console.error('Failed to save to localStorage', e)
+  }
+}
+
+async function fetchFromFirebase(userId) {
+  if (!db) return null;
+  try {
+    const docRef = doc(db, 'users', userId);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists()) {
+      return docSnap.data();
+    }
+    return null;
+  } catch (e) {
+    console.error('Failed to fetch from Firebase', e);
+    return null;
+  }
+}
+
+async function saveToFirebase(userId, state) {
+  if (!db) return;
+  try {
+    await setDoc(doc(db, 'users', userId), state);
+  } catch (e) {
+    console.error('Failed to save to Firebase', e);
   }
 }
 
@@ -280,14 +307,55 @@ function reducer(state, action) {
 // ─── Context ──────────────────────────────────────────────────────────────────
 const PortfolioContext = createContext(null)
 
-export function PortfolioProvider({ children }) {
-  const saved = loadFromStorage()
-  const [state, dispatch] = useReducer(reducer, saved ?? DEFAULT_STATE)
+export function PortfolioProvider({ children, user }) {
+  const [state, dispatch] = useReducer(reducer, DEFAULT_STATE)
+  const [isReady, setIsReady] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
 
-  // Persist on every state change
+  // 1. Initial Load from Firebase (or migrate from localStorage)
   useEffect(() => {
-    saveToStorage(state)
-  }, [state])
+    async function initData() {
+      if (!user) return;
+      setIsReady(false);
+      const fbData = await fetchFromFirebase(user.uid);
+      
+      if (fbData) {
+        // User has data in Firebase, use it
+        dispatch({ type: 'IMPORT_STATE', state: fbData });
+      } else {
+        // No data in Firebase. 
+        // If this is the specific migration user AND local storage has data, migrate it.
+        const localData = loadFromStorage();
+        if (user.email === 'harshithsr20@gmail.com' && localData) {
+          console.log('Migrating local data to Firebase for harshithsr20@gmail.com');
+          dispatch({ type: 'IMPORT_STATE', state: localData });
+        } else if (localData) {
+          // Alternatively, always migrate local data to a new user account?
+          // We will do it for everyone just to be nice, but explicitly handling it.
+          dispatch({ type: 'IMPORT_STATE', state: localData });
+        }
+      }
+      setIsReady(true);
+    }
+    initData();
+  }, [user]);
+
+  // 2. Persist on every state change (after ready)
+  useEffect(() => {
+    if (isReady && user) {
+      saveToFirebase(user.uid, state);
+      // Also save to local storage as a fallback/cache
+      saveToStorage(state);
+    }
+  }, [state, isReady, user])
+
+  if (!isReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#080808] text-white">
+        <div className="animate-pulse text-sm font-mono text-neutral-400">Loading Portfolio Data...</div>
+      </div>
+    )
+  }
 
   return (
     <PortfolioContext.Provider value={{ state, dispatch }}>
