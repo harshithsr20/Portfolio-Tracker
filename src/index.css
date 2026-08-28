@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    background-color: #080808;
+    color: #f5f5f5;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    font-size: 16px;
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0a0a0a;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #2e2e2e;
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #505050;
+  }
+
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button {
+    opacity: 0.4;
+  }
+}
+
+@layer components {
+  .ather-card {
+    @apply bg-neutral-950 border border-neutral-800 rounded-2xl p-6 sm:p-7 transition-all duration-200 relative overflow-hidden;
+  }
+
+  .ather-card-hover {
+    @apply hover:border-neutral-600 hover:bg-neutral-900/60 transition-all duration-200;
+  }
+
+  .ather-btn-primary {
+    @apply inline-flex items-center justify-center gap-2.5 bg-white text-black font-bold text-sm tracking-wider uppercase px-6 py-3.5 rounded-xl hover:bg-neutral-200 active:scale-[0.98] transition-all duration-150 shadow-md disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white;
+  }
+
+  .ather-btn-secondary {
+    @apply inline-flex items-center justify-center gap-2.5 bg-neutral-900 text-neutral-100 font-semibold text-sm tracking-wider uppercase px-5 py-3 rounded-xl border border-neutral-700 hover:border-neutral-500 hover:text-white hover:bg-neutral-800 active:scale-[0.98] transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+
+  .ather-btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 text-neutral-300 hover:text-white text-xs font-mono tracking-wider uppercase px-3.5 py-2 rounded-lg hover:bg-neutral-800 transition-colors border border-transparent hover:border-neutral-700;
+  }
+
+  .ather-btn-danger {
+    @apply inline-flex items-center justify-center text-neutral-400 hover:text-red-400 hover:bg-red-950/40 p-2.5 rounded-xl border border-transparent hover:border-red-900/60 transition-all;
+  }
+
+  .ather-input {
+    @apply bg-black border border-neutral-800 text-white font-mono rounded-xl px-4 py-2.5 text-base focus:outline-none focus:border-white focus:ring-1 focus:ring-white transition-all w-full placeholder:text-neutral-600;
+  }
+
+  .ather-tab {
+    @apply px-5 py-2.5 rounded-xl font-mono text-sm tracking-wider uppercase transition-all duration-150 cursor-pointer select-none flex items-center gap-2;
+  }
+
+  .ather-tab-active {
+    @apply bg-white text-black font-bold shadow-sm;
+  }
+
+  .ather-tab-inactive {
+    @apply text-neutral-400 hover:text-white hover:bg-neutral-800;
+  }
+
+  .ather-badge {
+    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-mono tracking-wider uppercase border;
+  }
+
+  .ather-badge-over {
+    @apply bg-neutral-950 text-emerald-400 border-emerald-500/30;
+  }
+
+  .ather-badge-under {
+    @apply bg-neutral-950 text-rose-400 border-rose-500/30;
+  }
+
+  .ather-badge-neutral {
+    @apply bg-neutral-950 text-neutral-300 border-neutral-700;
+  }
+
+  .ather-th {
+    @apply text-xs font-mono font-bold text-neutral-400 uppercase tracking-wider px-5 py-4 text-left border-b border-neutral-800 bg-black;
+  }
+
+  .ather-td {
+    @apply px-5 py-4 text-base text-neutral-200 border-b border-neutral-900 font-mono;
+  }
+}
+
+/* Subtle background architectural grid */
+.bg-grid-pattern {
+  background-size: 40px 40px;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+}
