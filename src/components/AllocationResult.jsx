@@ -1,17 +1,34 @@
-import { formatCurrency } from '../utils/portfolio'
+import { formatCurrency, computeTotalValue } from '../utils/portfolio'
 
 export default function AllocationResult({ result, funds, minLot, onApply, isInvested }) {
   if (!result) return null
 
   const { allocations, carryOver, fallbackUsed, reasons } = result
 
+  const totalCurrentValue = computeTotalValue(funds)
+  const totalAllocated = Object.values(allocations).reduce((sum, amt) => sum + (Number(amt) || 0), 0)
+  const totalNewValue = totalCurrentValue + totalAllocated
+
   const allocated = funds
     .filter(f => (allocations[f.id] || 0) > 0)
-    .map((f) => ({
-      ...f,
-      amount: allocations[f.id],
-      reason: reasons.find(r => r.fundId === f.id),
-    }))
+    .map((f) => {
+      const amount = allocations[f.id]
+      const currentVal = Number(f.currentValue) || 0
+      const newVal = currentVal + amount
+      const currentPct = totalCurrentValue > 0 ? (currentVal / totalCurrentValue) * 100 : 0
+      const newPct = totalNewValue > 0 ? (newVal / totalNewValue) * 100 : 0
+      const pctDelta = newPct - currentPct
+
+      return {
+        ...f,
+        amount,
+        currentPct,
+        newPct,
+        pctDelta,
+        newVal,
+        reason: reasons.find(r => r.fundId === f.id),
+      }
+    })
 
   return (
     <div className="space-y-5">
@@ -40,18 +57,18 @@ export default function AllocationResult({ result, funds, minLot, onApply, isInv
             return (
               <div
                 key={f.id}
-                className="bg-black border border-neutral-800 hover:border-neutral-600 rounded-2xl p-5 transition-all"
+                className="bg-black border border-neutral-800 hover:border-neutral-700 rounded-2xl p-5 transition-all shadow-md"
               >
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                   <div className="flex items-center gap-4">
                     <div
-                      className="w-11 h-11 rounded-xl flex items-center justify-center font-mono font-bold text-sm text-white border border-white/30"
+                      className="w-11 h-11 rounded-xl flex items-center justify-center font-mono font-bold text-sm text-white border border-white/30 shrink-0"
                       style={{ background: f.color }}
                     >
                       0{idx + 1}
                     </div>
                     <div>
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-2.5 flex-wrap">
                         <span className="font-display font-bold text-white text-base tracking-wide">
                           {f.name}
                         </span>
@@ -69,9 +86,10 @@ export default function AllocationResult({ result, funds, minLot, onApply, isInv
 
                   <div className="text-right">
                     <p className="text-2xl font-mono font-extrabold text-white tracking-tight">
-                      +{formatCurrency(f.amount)}
+                      <span className="text-emerald-400">+{formatCurrency(f.amount)}</span>{' '}
+                      <span className="text-lg text-emerald-300 font-bold">({f.newPct.toFixed(1)}%)</span>
                     </p>
-                    <p className="text-xs font-mono text-emerald-400 mt-1 uppercase tracking-wider font-bold">
+                    <p className="text-xs font-mono text-neutral-400 mt-0.5 uppercase tracking-wider font-semibold">
                       {lots} LOT{lots > 1 ? 'S' : ''} × {formatCurrency(minLot)}
                     </p>
                   </div>

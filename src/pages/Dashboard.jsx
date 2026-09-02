@@ -10,25 +10,42 @@ import DirectInvestCard from '../components/DirectInvestCard'
 
 export default function Dashboard() {
   const { state } = usePortfolio()
-  const { funds, carryOver, weeklyAmount = 200 } = state
+  const { funds, carryOver, weeklyAmount = 200, minLot = 100 } = state
   const enriched = enrichFunds(funds)
   const totalValue = enriched[0]?.totalValue ?? 0
   const targetSum = computeTargetSum(funds)
   const isTargetValid = Math.abs(targetSum - 100) < 0.01
 
   const schedule = getWeeklyScheduleInfo()
-  const minLot = 100
   const effectiveAmount = weeklyAmount + (carryOver || 0)
 
-  const topRecommended = useMemo(() => {
+  // Real-time allocation recalculation whenever any fund holding, target, or budget changes
+  const allocationPlan = useMemo(() => {
     if (funds.length === 0) return null
     const res = allocate(funds, effectiveAmount, minLot)
     if (!res || !res.allocations) return null
-    const allocFunds = funds
+    const totalAllocated = Object.values(res.allocations).reduce((sum, v) => sum + (Number(v) || 0), 0)
+    const newTotal = totalValue + totalAllocated
+
+    const allocFunds = enriched
       .filter(f => (res.allocations[f.id] || 0) > 0)
-      .map(f => ({ ...f, amount: res.allocations[f.id] }))
-    return allocFunds[0] || null
-  }, [funds, effectiveAmount, minLot])
+      .map(f => {
+        const amount = res.allocations[f.id]
+        const newVal = (Number(f.currentValue) || 0) + amount
+        const newPct = newTotal > 0 ? (newVal / newTotal) * 100 : 0
+        return {
+          ...f,
+          amount,
+          newVal,
+          newPct,
+        }
+      })
+    return {
+      funds: allocFunds,
+      carryOver: res.carryOver,
+      fallbackUsed: res.fallbackUsed,
+    }
+  }, [funds, effectiveAmount, minLot, enriched, totalValue])
 
   return (
     <div className="space-y-8">
@@ -87,20 +104,34 @@ export default function Dashboard() {
                 {schedule.isSaturday ? '⚡ EXECUTE TODAY' : `${schedule.daysUntilSaturday}D REMAINING`}
               </span>
             </div>
-            <div className="font-display font-bold text-lg text-white">
-              {topRecommended ? (
-                <span>
-                  Invest <strong className="text-emerald-400">₹{topRecommended.amount}</strong> in {topRecommended.name}
-                </span>
-              ) : (
-                <span className="text-neutral-400">Target ₹{state.weeklyAmount || 200}/week</span>
-              )}
-            </div>
+
+            {allocationPlan && allocationPlan.funds.length > 0 ? (
+              <div className="space-y-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {allocationPlan.funds.map((f, i) => (
+                    <span key={f.id} className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-mono font-bold text-white bg-neutral-900 border border-neutral-800 px-2.5 py-1 rounded-md">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ background: f.color }}></span>
+                      <span>{f.name}: <strong className="text-emerald-400">₹{f.amount}</strong> <span className="text-emerald-300 font-semibold">({f.newPct.toFixed(1)}%)</span></span>
+                      {i < allocationPlan.funds.length - 1 && <span className="text-neutral-500 ml-1">+</span>}
+                    </span>
+                  ))}
+                </div>
+                <div className="text-[11px] font-mono text-emerald-400/90 font-semibold pt-1 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span>Live Recalculated for ₹{effectiveAmount} budget</span>
+                </div>
+              </div>
+            ) : (
+              <div className="font-display font-bold text-base text-neutral-400">
+                Target ₹{weeklyAmount}/week · Configure funds in Setup
+              </div>
+            )}
+
             <p className="text-xs font-mono text-neutral-400 mt-2">
-              Audited every Sunday · Execution for {schedule.saturdayDateFormatted}
+              Audited for {schedule.saturdayDateFormatted} · Drift minimizer
             </p>
           </div>
-          <div className="pt-4 border-t border-neutral-800 mt-4 flex items-center justify-between text-xs font-mono">
+          <div className="pt-3 border-t border-neutral-800 mt-3 flex items-center justify-between text-xs font-mono">
             <span className="text-neutral-500">CYCLE STATUS</span>
             <span className="text-white font-bold">{schedule.dayName.toUpperCase()}</span>
           </div>

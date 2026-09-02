@@ -5,8 +5,6 @@ export default function FactSheets() {
     { name: 'HDFC Nifty 50 Index Fund', url: 'https://www.hdfcfund.com/factsheet/hdfc-nifty-50-index-fund.pdf' },
     { name: 'Nippon India Growth Fund', url: 'https://mf.nipponindiaim.com/investor-service/downloads/factsheet-portfolio-and-other-disclosures' },
     { name: 'Edelweiss Small Cap Fund', url: 'https://www.edelweissmf.com/downloads/factsheets' },
-    { name: 'Edelweiss US Technology Equity FOF', url: 'https://www.edelweissmf.com/downloads/factsheets' },
-    { name: 'Edelweiss Greater China Equity Off-shore Fund', url: 'https://www.edelweissmf.com/downloads/factsheets' },
     { name: 'Axis Liquid Fund', url: 'https://www.axismf.com/downloads/products' }
   ]
 

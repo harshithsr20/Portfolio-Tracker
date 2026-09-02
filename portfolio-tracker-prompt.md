@@ -24,14 +24,12 @@ Build a **local, single-user portfolio allocation tracker** web app. It runs on 
 
 | Fund | Target % |
 |---|---|
-| Nifty 50 | 30% |
-| Mid Cap | 15% |
+| Nifty 50 | 35% |
+| Mid Cap | 20% |
 | Small Cap | 20% |
 | Liquid Fund | 10% |
 | Gold | 5% |
-| US Tech Fund | 10% |
-| Greater China Fund | 5% |
-| Individual Stocks | 5% (this is the remainder/delta — target %s should always sum to 100%, and if I edit any target, recompute this one automatically, or flag if the total doesn't sum to 100%) |
+| Individual Stocks | 10% (this is the remainder/delta — target %s should always sum to 100%, and if I edit any target, recompute this one automatically, or flag if the total doesn't sum to 100%) |
 
 Each fund needs:
 - `name` (string)

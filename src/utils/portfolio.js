@@ -96,3 +96,19 @@ export function formatPct(value, decimals = 1) {
   const sign = val > 0 ? '+' : ''
   return `${sign}${val.toFixed(decimals)}%`
 }
+
+/**
+ * Compute the new percentage a fund will have after applying an allocation amount.
+ * @param {Object} fund - fund object with currentValue
+ * @param {number} fundAllocAmount - recommended allocation for this fund (e.g. 100)
+ * @param {number} totalValue - current total portfolio value
+ * @param {number} totalAllocAmount - total allocated across the portfolio in this cycle
+ * @returns {number} new percentage (0 to 100)
+ */
+export function computeProjectedPct(fund, fundAllocAmount, totalValue, totalAllocAmount) {
+  const newFundVal = (Number(fund?.currentValue) || 0) + (Number(fundAllocAmount) || 0)
+  const newTotal = (Number(totalValue) || 0) + (Number(totalAllocAmount) || 0)
+  if (newTotal <= 0) return 0
+  return (newFundVal / newTotal) * 100
+}
+

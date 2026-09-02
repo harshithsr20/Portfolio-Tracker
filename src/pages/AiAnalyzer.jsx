@@ -5,8 +5,6 @@ export default function AiAnalyzer({ onNavigateToMfData, preselectedFund }) {
     { name: 'HDFC Nifty 50 Index Fund' },
     { name: 'Nippon India Growth Fund' },
     { name: 'Edelweiss Small Cap Fund' },
-    { name: 'Edelweiss US Technology Equity FOF' },
-    { name: 'Edelweiss Greater China Equity Off-shore Fund' },
     { name: 'Axis Liquid Fund' }
   ]
 

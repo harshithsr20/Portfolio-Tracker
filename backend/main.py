@@ -340,7 +340,7 @@ Strictly extract and evaluate all of the following parameters:
 Strictly return ONLY valid JSON matching this exact schema:
 {{
   "detected_fund_name": "Full name found in factsheet",
-  "matched_portfolio_fund": "One of: HDFC Nifty 50 | Nippon India Growth | Edelweiss Small Cap | Edelweiss US Tech | Edelweiss Greater China | Axis Liquid | Other",
+  "matched_portfolio_fund": "One of: HDFC Nifty 50 | Nippon India Growth | Edelweiss Small Cap | Axis Liquid | Other",
   "as_of_date": "YYYY-MM-DD or Month Year",
   "aum_in_crores": 0.0,
   "ter_direct_percentage": 0.0,
@@ -554,8 +554,6 @@ def seed_funds(db: Session):
         {"id": "hdfc-nifty-50", "name": "HDFC Nifty 50 Index Fund", "amc": "HDFC", "category": "Large Cap / Index"},
         {"id": "nippon-india-growth", "name": "Nippon India Growth Fund", "amc": "Nippon India", "category": "Mid Cap"},
         {"id": "edelweiss-small-cap", "name": "Edelweiss Small Cap Fund", "amc": "Edelweiss", "category": "Small Cap"},
-        {"id": "edelweiss-us-tech", "name": "Edelweiss US Technology Equity FOF", "amc": "Edelweiss", "category": "Overseas / Tech"},
-        {"id": "edelweiss-china", "name": "Edelweiss Greater China Equity Off-shore Fund", "amc": "Edelweiss", "category": "Overseas / FoF"},
         {"id": "axis-liquid", "name": "Axis Liquid Fund", "amc": "Axis", "category": "Debt / Liquid"}
     ]
     

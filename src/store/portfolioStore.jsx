@@ -4,15 +4,31 @@ const STORAGE_KEY = 'portfolio-tracker-v1'
 
 // ─── Seed data ────────────────────────────────────────────────────────────────
 const DEFAULT_FUNDS = [
-  { id: 'nifty50',        name: 'Nifty 50',           targetPct: 30, currentValue: 0 },
-  { id: 'midcap',         name: 'Mid Cap',             targetPct: 15, currentValue: 0 },
+  { id: 'nifty50',        name: 'Nifty 50',           targetPct: 35, currentValue: 0 },
+  { id: 'midcap',         name: 'Mid Cap',             targetPct: 20, currentValue: 0 },
   { id: 'smallcap',       name: 'Small Cap',           targetPct: 20, currentValue: 0 },
   { id: 'liquid',         name: 'Liquid Fund',         targetPct: 10, currentValue: 0 },
   { id: 'gold',           name: 'Gold',                targetPct: 5,  currentValue: 0 },
-  { id: 'ustech',         name: 'US Tech Fund',        targetPct: 10, currentValue: 0 },
-  { id: 'chinafund',      name: 'Greater China Fund',  targetPct: 5,  currentValue: 0 },
-  { id: 'stocks',         name: 'Individual Stocks',   targetPct: 5,  currentValue: 0 },
+  { id: 'stocks',         name: 'Individual Stocks',   targetPct: 10, currentValue: 0 },
 ]
+
+export function sanitizeFunds(funds) {
+  if (!Array.isArray(funds) || funds.length === 0) return DEFAULT_FUNDS
+  // Filter out closed funds (US Tech, China)
+  const filtered = funds.filter(f => {
+    const id = (f.id || '').toLowerCase()
+    const name = (f.name || '').toLowerCase()
+    return id !== 'ustech' && id !== 'chinafund' && 
+           !name.includes('china') && !name.includes('us tech') && !name.includes('us technology')
+  })
+
+  return filtered.map(f => {
+    if (f.id === 'nifty50' && f.targetPct === 30) return { ...f, targetPct: 35 }
+    if (f.id === 'midcap' && f.targetPct === 15) return { ...f, targetPct: 20 }
+    if (f.id === 'stocks' && f.targetPct === 5) return { ...f, targetPct: 10 }
+    return f
+  })
+}
 
 const DEFAULT_STATE = {
   funds: DEFAULT_FUNDS,
@@ -20,6 +36,8 @@ const DEFAULT_STATE = {
   currency: 'INR',
   carryOver: 0,
   weeklyAmount: 200,    // Default weekly investment amount in INR
+  minLot: 100,          // Default min lot in INR
+  lastModified: Date.now(),
   weeklyInvestments: {}, // { [cycleKey]: { timestamp, amount, allocations } }
   mfData: {},           // { [fundIdOrName]: factSheetAnalysisObject }
 }
@@ -32,7 +50,11 @@ function loadFromStorage() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return null
-    return JSON.parse(raw)
+    const parsed = JSON.parse(raw)
+    if (parsed && parsed.funds) {
+      parsed.funds = sanitizeFunds(parsed.funds)
+    }
+    return parsed
   } catch {
     return null
   }
@@ -145,13 +167,13 @@ function reducer(state, action) {
   switch (action.type) {
 
     case 'SET_FUNDS':
-      return { ...state, funds: action.funds }
+      return { ...state, funds: action.funds, lastModified: Date.now() }
 
     case 'UPDATE_FUND': {
       const funds = state.funds.map(f =>
         f.id === action.id ? { ...f, ...action.changes } : f
       )
-      return { ...state, funds }
+      return { ...state, funds, lastModified: Date.now() }
     }
 
     case 'ADD_TO_FUND': {
@@ -174,6 +196,7 @@ function reducer(state, action) {
         ...state,
         funds,
         history: [...state.history, snapshot],
+        lastModified: Date.now(),
       }
     }
 
@@ -184,12 +207,12 @@ function reducer(state, action) {
         targetPct: 0,
         currentValue: 0,
       }
-      return { ...state, funds: [...state.funds, newFund] }
+      return { ...state, funds: [...state.funds, newFund], lastModified: Date.now() }
     }
 
     case 'REMOVE_FUND': {
       const funds = state.funds.filter(f => f.id !== action.id)
-      return { ...state, funds }
+      return { ...state, funds, lastModified: Date.now() }
     }
 
     case 'APPLY_ALLOCATION': {
@@ -222,18 +245,22 @@ function reducer(state, action) {
         history: [...state.history, snapshot],
         carryOver: action.carryOver ?? state.carryOver,
         weeklyInvestments: updatedWeeklyInvestments,
+        lastModified: Date.now(),
       }
     }
 
     case 'SET_WEEKLY_AMOUNT':
-      return { ...state, weeklyAmount: Math.max(100, Number(action.amount) || 200) }
+      return { ...state, weeklyAmount: Math.max(100, Number(action.amount) || 200), lastModified: Date.now() }
+
+    case 'SET_MIN_LOT':
+      return { ...state, minLot: Math.max(10, Number(action.minLot) || 100), lastModified: Date.now() }
 
     case 'RESET_CYCLE_INVESTMENT': {
       const updatedWeeklyInvestments = { ...(state.weeklyInvestments || {}) }
       if (action.cycleKey) {
         delete updatedWeeklyInvestments[action.cycleKey]
       }
-      return { ...state, weeklyInvestments: updatedWeeklyInvestments }
+      return { ...state, weeklyInvestments: updatedWeeklyInvestments, lastModified: Date.now() }
     }
 
     case 'SAVE_SNAPSHOT': {
@@ -248,11 +275,11 @@ function reducer(state, action) {
         })),
         totalValue,
       }
-      return { ...state, history: [...state.history, snapshot] }
+      return { ...state, history: [...state.history, snapshot], lastModified: Date.now() }
     }
 
     case 'SET_CARRY_OVER':
-      return { ...state, carryOver: action.amount }
+      return { ...state, carryOver: action.amount, lastModified: Date.now() }
 
     case 'SAVE_MF_DATA': {
       const { fundKey, data } = action
@@ -296,7 +323,11 @@ function reducer(state, action) {
       return { 
         ...DEFAULT_STATE, 
         ...action.state,
-        mfData: action.state.mfData || {}
+        funds: action.state?.funds ? sanitizeFunds(action.state.funds) : DEFAULT_FUNDS,
+        minLot: action.state?.minLot || 100,
+        weeklyAmount: action.state?.weeklyAmount || 200,
+        mfData: action.state?.mfData || {},
+        lastModified: Date.now(),
       }
 
     default:

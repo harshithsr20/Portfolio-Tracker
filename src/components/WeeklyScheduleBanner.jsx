@@ -4,6 +4,8 @@ import { formatCurrency } from '../utils/portfolio'
 export default function WeeklyScheduleBanner({ 
   weeklyAmount, 
   onAmountChange, 
+  minLot = 100,
+  onMinLotChange,
   isInvested, 
   onResetInvested 
 }) {
@@ -53,22 +55,47 @@ export default function WeeklyScheduleBanner({
           </div>
         </div>
 
-        {/* Weekly Investment Budget Configuration */}
-        <div className="flex items-center gap-3 bg-black/80 border border-neutral-800 rounded-xl px-3.5 py-2">
-          <span className="text-xs font-mono text-neutral-400 uppercase font-semibold">
-            WEEKLY BUDGET:
-          </span>
-          <div className="flex items-center gap-1">
-            <span className="text-sm font-mono font-bold text-neutral-400">₹</span>
-            <input 
-              type="number"
-              min="100"
-              step="100"
-              value={weeklyAmount}
-              onChange={(e) => onAmountChange(Number(e.target.value))}
-              className="w-20 bg-neutral-900 border border-neutral-700 rounded-lg px-2 py-1 text-sm font-mono font-bold text-white text-right focus:outline-none focus:border-emerald-400"
-            />
+        {/* Investment Budget & Lot Size Configuration */}
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Weekly Budget */}
+          <div className="flex items-center gap-2.5 bg-black/80 border border-neutral-800 rounded-xl px-3 py-2">
+            <span className="text-xs font-mono text-neutral-400 uppercase font-semibold">
+              BUDGET:
+            </span>
+            <div className="flex items-center gap-1">
+              <span className="text-sm font-mono font-bold text-neutral-400">₹</span>
+              <input 
+                type="number"
+                min="100"
+                step="100"
+                value={weeklyAmount}
+                onChange={(e) => onAmountChange(Number(e.target.value))}
+                className="w-20 bg-neutral-900 border border-neutral-700 rounded-lg px-2 py-1 text-sm font-mono font-bold text-white text-right focus:outline-none focus:border-emerald-400"
+                title="Weekly investment budget"
+              />
+            </div>
           </div>
+
+          {/* Lot Size */}
+          {onMinLotChange && (
+            <div className="flex items-center gap-2.5 bg-black/80 border border-neutral-800 rounded-xl px-3 py-2">
+              <span className="text-xs font-mono text-neutral-400 uppercase font-semibold">
+                MIN LOT:
+              </span>
+              <div className="flex items-center gap-1">
+                <span className="text-sm font-mono font-bold text-neutral-400">₹</span>
+                <input 
+                  type="number"
+                  min="10"
+                  step="50"
+                  value={minLot}
+                  onChange={(e) => onMinLotChange(Number(e.target.value))}
+                  className="w-16 bg-neutral-900 border border-neutral-700 rounded-lg px-2 py-1 text-sm font-mono font-bold text-white text-right focus:outline-none focus:border-emerald-400"
+                  title="Minimum lot size per fund"
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

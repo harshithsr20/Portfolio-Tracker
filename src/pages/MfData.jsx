@@ -5,8 +5,6 @@ export const DEFAULT_MF_FUNDS = [
   { id: 'hdfc-nifty-50',     name: 'HDFC Nifty 50 Index Fund',                    category: 'Large Cap / Index', benchmark: 'Nifty 50 TRI' },
   { id: 'nippon-growth',     name: 'Nippon India Growth Fund',                    category: 'Mid Cap',           benchmark: 'Nifty Midcap 150 TRI' },
   { id: 'edelweiss-small',   name: 'Edelweiss Small Cap Fund',                    category: 'Small Cap',         benchmark: 'Nifty Smallcap 250 TRI' },
-  { id: 'edelweiss-us-tech', name: 'Edelweiss US Technology Equity FOF',          category: 'Overseas / Tech',   benchmark: 'Russell 1000 Equal Weight Tech' },
-  { id: 'edelweiss-china',   name: 'Edelweiss Greater China Equity Off-shore Fund', category: 'Overseas / FoF',    benchmark: 'MSCI Golden Dragon Index' },
   { id: 'axis-liquid',       name: 'Axis Liquid Fund',                            category: 'Debt / Liquid',     benchmark: 'NIFTY Liquid Index A-I' }
 ]
 

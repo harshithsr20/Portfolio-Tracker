@@ -9,19 +9,19 @@ import WeeklyScheduleBanner from '../components/WeeklyScheduleBanner'
 
 export default function Allocator() {
   const { state, dispatch } = usePortfolio()
-  const { funds, carryOver, weeklyAmount = 200, weeklyInvestments = {} } = state
+  const { funds, carryOver, weeklyAmount = 200, minLot = 100, weeklyInvestments = {} } = state
   const enriched = enrichFunds(funds)
 
   const schedule = getWeeklyScheduleInfo()
   const isInvested = Boolean(weeklyInvestments[schedule.cycleKey])
 
-  // Parameters: weekly amount from store, ₹100 min lot
+  // Effective investment amount: weekly budget + any carryover from previous calculation
   const investAmount = weeklyAmount
-  const minLot = 100
   const effectiveAmount = investAmount + (carryOver || 0)
 
   const [applied, setApplied] = useState(false)
 
+  // Real-time greedy allocation calculation whenever funds, weeklyAmount, carryOver, or minLot change
   const result = useMemo(() => {
     if (funds.length === 0) return null
     return allocate(funds, effectiveAmount, minLot)
@@ -44,6 +44,10 @@ export default function Allocator() {
     dispatch({ type: 'SET_WEEKLY_AMOUNT', amount })
   }
 
+  function handleMinLotChange(lot) {
+    dispatch({ type: 'SET_MIN_LOT', minLot: lot })
+  }
+
   function handleResetInvested() {
     dispatch({ type: 'RESET_CYCLE_INVESTMENT', cycleKey: schedule.cycleKey })
   }
@@ -55,6 +59,8 @@ export default function Allocator() {
       <WeeklyScheduleBanner
         weeklyAmount={weeklyAmount}
         onAmountChange={handleAmountChange}
+        minLot={minLot}
+        onMinLotChange={handleMinLotChange}
         isInvested={isInvested}
         onResetInvested={handleResetInvested}
       />
