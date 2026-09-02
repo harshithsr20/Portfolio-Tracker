@@ -1,6 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { usePortfolio } from '../store/portfolioStore';
 import { normalizeFundKey } from '../pages/MfData';
+import {
+  analyzeFactSheetWithVision,
+  getStoredProvider,
+  getStoredApiKey,
+} from '../utils/aiVision';
+import AiSettingsModal from './AiSettingsModal';
 
 export default function FactSheetUploader({ funds, onNavigateToMfData, preselectedFund }) {
   const { dispatch } = usePortfolio();
@@ -11,7 +17,20 @@ export default function FactSheetUploader({ funds, onNavigateToMfData, preselect
   const [savedFundKey, setSavedFundKey] = useState(null);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState('all');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [currentProvider, setCurrentProvider] = useState(getStoredProvider());
+  const [hasApiKey, setHasApiKey] = useState(Boolean(getStoredApiKey()));
   const fileInputRef = useRef(null);
+
+  const refreshAiStatus = useCallback(() => {
+    const p = getStoredProvider();
+    setCurrentProvider(p);
+    setHasApiKey(Boolean(getStoredApiKey(p)));
+  }, []);
+
+  useEffect(() => {
+    refreshAiStatus();
+  }, [refreshAiStatus]);
 
   useEffect(() => {
     if (preselectedFund) {
@@ -94,30 +113,27 @@ export default function FactSheetUploader({ funds, onNavigateToMfData, preselect
 
   const handleAnalyze = async () => {
     if (images.length === 0) return;
+
+    // Check if API key is configured
+    const key = getStoredApiKey();
+    if (!key) {
+      setIsSettingsOpen(true);
+      setError('Please provide a Google Gemini or Groq API key to analyze in the browser.');
+      return;
+    }
     
     setAnalyzing(true);
     setError(null);
     setResults(null);
     setSavedFundKey(null);
 
-    const formData = new FormData();
-    images.forEach((img) => {
-      formData.append('files', img.file);
-    });
-    formData.append('target_fund', targetFund);
-
     try {
-      const res = await fetch('/api/factsheets/analyze-multiple', {
-        method: 'POST',
-        body: formData,
+      const rawFiles = images.map(img => img.file);
+      const data = await analyzeFactSheetWithVision({
+        files: rawFiles,
+        targetFund,
       });
 
-      if (!res.ok) {
-        const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.detail || 'Analysis failed');
-      }
-
-      const data = await res.json();
       setResults(data);
 
       // Automatically write and persist the data to the matching fund in 05 MF Data
@@ -134,7 +150,12 @@ export default function FactSheetUploader({ funds, onNavigateToMfData, preselect
         data: data,
       });
     } catch (err) {
-      setError(err.message);
+      if (err.message === 'NO_API_KEY_CONFIGURED') {
+        setIsSettingsOpen(true);
+        setError('Please configure your Gemini or Groq API key.');
+      } else {
+        setError(err.message);
+      }
       console.error(err);
     } finally {
       setAnalyzing(false);
@@ -181,6 +202,22 @@ export default function FactSheetUploader({ funds, onNavigateToMfData, preselect
           <h2 className="text-white font-bold tracking-wide uppercase text-xs font-mono">Fact Sheet Multi-Page Vision Analyzer</h2>
         </div>
         <div className="flex items-center space-x-3">
+          <button
+            type="button"
+            onClick={() => setIsSettingsOpen(true)}
+            className={`px-3 py-1.5 text-xs font-mono rounded-lg border transition-all flex items-center gap-1.5 ${
+              hasApiKey
+                ? 'bg-emerald-950/50 border-emerald-500/60 text-emerald-300 hover:bg-emerald-900/60'
+                : 'bg-amber-950/40 border-amber-500/60 text-amber-300 hover:bg-amber-900/60 animate-pulse'
+            }`}
+            title="Configure Vision AI Provider & API Key"
+          >
+            <span>{hasApiKey ? '⚡' : '⚙️'}</span>
+            <span className="font-bold uppercase tracking-wider">
+              {hasApiKey ? `${currentProvider === 'gemini' ? 'Gemini' : 'Groq'} Ready` : 'Configure AI Key'}
+            </span>
+          </button>
+
           <select 
             value={targetFund} 
             onChange={e => setTargetFund(e.target.value)}
@@ -822,6 +859,13 @@ export default function FactSheetUploader({ funds, onNavigateToMfData, preselect
           </div>
         </div>
       </div>
+
+      {/* AI Settings Modal */}
+      <AiSettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onSave={refreshAiStatus}
+      />
     </div>
   );
 }
