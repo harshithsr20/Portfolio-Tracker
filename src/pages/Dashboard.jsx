@@ -8,7 +8,7 @@ import AllocationBarChart from '../components/AllocationBarChart'
 import DriftTable from '../components/DriftTable'
 import DirectInvestCard from '../components/DirectInvestCard'
 
-export default function Dashboard() {
+export default function Dashboard({ onNavigateToSetup }) {
   const { state } = usePortfolio()
   const { funds, carryOver, weeklyAmount = 200, minLot = 100 } = state
   const enriched = enrichFunds(funds)
@@ -50,6 +50,29 @@ export default function Dashboard() {
   return (
     <div className="space-y-8">
       
+      {/* If No Funds Configured */}
+      {funds.length === 0 && (
+        <div className="bg-neutral-950 border border-neutral-700 rounded-2xl p-6 flex items-center justify-between gap-4 flex-wrap shadow-xl">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">⚡</span>
+            <div>
+              <h3 className="text-white font-bold font-display text-base">No Asset Categories Configured</h3>
+              <p className="text-neutral-400 font-mono text-xs mt-0.5">
+                Set up your mutual fund categories, target allocation %, and current capital to see your portfolio analytics.
+              </p>
+            </div>
+          </div>
+          {onNavigateToSetup && (
+            <button
+              onClick={onNavigateToSetup}
+              className="ather-btn-primary text-xs py-2.5 px-5 font-bold"
+            >
+              Configure Funds in Fund Setup →
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Top Metric Cards - 3 Prominent Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         

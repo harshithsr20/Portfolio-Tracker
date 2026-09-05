@@ -7,7 +7,7 @@ import AllocationResult from '../components/AllocationResult'
 import DirectInvestCard from '../components/DirectInvestCard'
 import WeeklyScheduleBanner from '../components/WeeklyScheduleBanner'
 
-export default function Allocator() {
+export default function Allocator({ onNavigateToSetup }) {
   const { state, dispatch } = usePortfolio()
   const { funds, carryOver, weeklyAmount = 200, minLot = 100, weeklyInvestments = {} } = state
   const enriched = enrichFunds(funds)
@@ -117,8 +117,17 @@ export default function Allocator() {
         )}
 
         {funds.length === 0 && (
-          <div className="text-center text-neutral-400 py-10 text-sm font-mono border border-dashed border-neutral-800 rounded-xl">
-            // ADD FUNDS IN FUND SETUP FIRST
+          <div className="text-center py-10 px-4 space-y-3">
+            <p className="text-neutral-400 text-sm font-mono">// NO ASSET CATEGORIES CONFIGURED</p>
+            <p className="text-xs text-neutral-500 font-mono">Configure your funds, current capital, and target weights first to generate weekly allocation recommendations.</p>
+            {onNavigateToSetup && (
+              <button
+                onClick={onNavigateToSetup}
+                className="ather-btn-primary text-xs py-2 px-4 inline-flex items-center gap-2 mt-2"
+              >
+                Go to Fund Setup →
+              </button>
+            )}
           </div>
         )}
       </div>

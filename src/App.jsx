@@ -14,20 +14,21 @@ import Login from './pages/Login'
 function AppContent({ user }) {
   const { state } = usePortfolio()
   const { funds } = state
-  const [activePage, setActivePage] = useState('dashboard')
+  
+  // For a new user (no funds), start on fundsetup. Otherwise start on dashboard.
+  const [activePage, setActivePage] = useState(() => {
+    return (!funds || funds.length === 0) ? 'fundsetup' : 'dashboard'
+  })
+  
   const [targetFundForMfData, setTargetFundForMfData] = useState(null)
   const [targetFundForAnalyzer, setTargetFundForAnalyzer] = useState(null)
-  const [hasCheckedNewUser, setHasCheckedNewUser] = useState(false)
 
-  // Redirect to Fund Setup if new user (no funds)
+  // Redirect to Fund Setup if new user (no funds configured)
   useEffect(() => {
-    if (!hasCheckedNewUser) {
-      if (funds.length === 0) {
-        setActivePage('fundsetup')
-      }
-      setHasCheckedNewUser(true)
+    if (!funds || funds.length === 0) {
+      setActivePage('fundsetup')
     }
-  }, [funds.length, hasCheckedNewUser])
+  }, [funds?.length])
 
   const handleNavigateToMfData = (fundKey) => {
     setTargetFundForMfData(fundKey)
@@ -44,10 +45,22 @@ function AppContent({ user }) {
       <Navbar activePage={activePage} setActivePage={setActivePage} />
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-8 py-8">
-        {activePage === 'dashboard'  && <Dashboard />}
-        {activePage === 'allocator'  && <Allocator />}
+        {activePage === 'fundsetup'  && (
+          <FundSetup 
+            onNavigateToDashboard={() => setActivePage('dashboard')} 
+          />
+        )}
+        {activePage === 'dashboard'  && (
+          <Dashboard 
+            onNavigateToSetup={() => setActivePage('fundsetup')} 
+          />
+        )}
+        {activePage === 'allocator'  && (
+          <Allocator 
+            onNavigateToSetup={() => setActivePage('fundsetup')} 
+          />
+        )}
         {activePage === 'factsheets' && <FactSheets />}
-        {activePage === 'fundsetup'  && <FundSetup />}
         {activePage === 'aianalyzer' && (
           <AiAnalyzer 
             onNavigateToMfData={handleNavigateToMfData}
@@ -112,8 +125,8 @@ export default function App() {
   }
 
   return (
-    <PortfolioProvider user={user}>
-      <AppContent user={user} />
+    <PortfolioProvider key={user.uid} user={user}>
+      <AppContent key={user.uid} user={user} />
     </PortfolioProvider>
   )
 }

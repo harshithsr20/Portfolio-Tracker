@@ -48,6 +48,15 @@ export default function AllocationBarChart({ enrichedFunds }) {
     color: f.color,
   }))
 
+  if (data.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-80 text-neutral-400 text-sm font-mono border border-dashed border-neutral-800 rounded-xl p-6">
+        <span className="text-base font-bold text-neutral-300">// NO TARGET ALLOCATIONS DEFINED</span>
+        <span className="text-neutral-400 mt-2 text-sm">Add funds in Fund Setup to see comparison chart</span>
+      </div>
+    )
+  }
+
   return (
     <div className="h-80 w-full">
       <ResponsiveContainer width="100%" height="100%">

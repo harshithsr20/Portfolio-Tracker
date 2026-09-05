@@ -1,19 +1,17 @@
 import { createContext, useContext, useReducer, useEffect, useState } from 'react'
 
-const STORAGE_KEY = 'portfolio-tracker-v1'
-
-// ─── Seed data ────────────────────────────────────────────────────────────────
-const DEFAULT_FUNDS = [
-  { id: 'nifty50',        name: 'Nifty 50',           targetPct: 35, currentValue: 0 },
-  { id: 'midcap',         name: 'Mid Cap',             targetPct: 20, currentValue: 0 },
-  { id: 'smallcap',       name: 'Small Cap',           targetPct: 20, currentValue: 0 },
-  { id: 'liquid',         name: 'Liquid Fund',         targetPct: 10, currentValue: 0 },
-  { id: 'gold',           name: 'Gold',                targetPct: 5,  currentValue: 0 },
-  { id: 'stocks',         name: 'Individual Stocks',   targetPct: 10, currentValue: 0 },
+// ─── Template seed data ────────────────────────────────────────────────────────
+export const TEMPLATE_FUNDS = [
+  { id: 'nifty50',        name: 'Nifty 50',           targetPct: 35, currentValue: 0, color: '#991B1B' },
+  { id: 'midcap',         name: 'Mid Cap',             targetPct: 20, currentValue: 0, color: '#16A34A' },
+  { id: 'smallcap',       name: 'Small Cap',           targetPct: 20, currentValue: 0, color: '#2563EB' },
+  { id: 'liquid',         name: 'Liquid Fund',         targetPct: 10, currentValue: 0, color: '#0D9488' },
+  { id: 'gold',           name: 'Gold',                targetPct: 5,  currentValue: 0, color: '#F59E0B' },
+  { id: 'stocks',         name: 'Individual Stocks',   targetPct: 10, currentValue: 0, color: '#2A2A2A' },
 ]
 
 export function sanitizeFunds(funds) {
-  if (!Array.isArray(funds) || funds.length === 0) return DEFAULT_FUNDS
+  if (!Array.isArray(funds) || funds.length === 0) return []
   // Filter out closed funds (US Tech, China)
   const filtered = funds.filter(f => {
     const id = (f.id || '').toLowerCase()
@@ -23,15 +21,18 @@ export function sanitizeFunds(funds) {
   })
 
   return filtered.map(f => {
-    if (f.id === 'nifty50' && f.targetPct === 30) return { ...f, targetPct: 35 }
-    if (f.id === 'midcap' && f.targetPct === 15) return { ...f, targetPct: 20 }
-    if (f.id === 'stocks' && f.targetPct === 5) return { ...f, targetPct: 10 }
-    return f
+    return {
+      ...f,
+      id: f.id || generateId(),
+      name: f.name || 'Fund Category',
+      targetPct: Number(f.targetPct) || 0,
+      currentValue: Number(f.currentValue) || 0,
+    }
   })
 }
 
-const DEFAULT_STATE = {
-  funds: DEFAULT_FUNDS,
+export const DEFAULT_STATE = {
+  funds: [],            // Brand new users start with empty funds list to set up their own portfolio
   history: [],          // [{ timestamp, funds: snapshot[], totalValue }]
   currency: 'INR',
   carryOver: 0,
@@ -46,12 +47,16 @@ const DEFAULT_STATE = {
 import { doc, getDoc, setDoc } from 'firebase/firestore'
 import { db } from '../lib/firebase'
 
-function loadFromStorage() {
+function getStorageKey(userId) {
+  return `portfolio-tracker_${userId || 'guest'}`
+}
+
+function loadFromStorage(userId) {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
+    const raw = localStorage.getItem(getStorageKey(userId))
     if (!raw) return null
     const parsed = JSON.parse(raw)
-    if (parsed && parsed.funds) {
+    if (parsed && Array.isArray(parsed.funds)) {
       parsed.funds = sanitizeFunds(parsed.funds)
     }
     return parsed
@@ -60,16 +65,17 @@ function loadFromStorage() {
   }
 }
 
-function saveToStorage(state) {
+function saveToStorage(userId, state) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+    if (!userId) return
+    localStorage.setItem(getStorageKey(userId), JSON.stringify(state))
   } catch (e) {
     console.error('Failed to save to localStorage', e)
   }
 }
 
 async function fetchFromFirebase(userId) {
-  if (!db) return null;
+  if (!db || !userId) return null;
   try {
     const docRef = doc(db, 'users', userId);
     const docSnap = await getDoc(docRef);
@@ -84,7 +90,7 @@ async function fetchFromFirebase(userId) {
 }
 
 async function saveToFirebase(userId, state) {
-  if (!db) return;
+  if (!db || !userId) return;
   try {
     await setDoc(doc(db, 'users', userId), state);
   } catch (e) {
@@ -319,11 +325,30 @@ function reducer(state, action) {
       }
     }
 
+    case 'CLEAR_ALL_FUNDS': {
+      return { ...state, funds: [], lastModified: Date.now() }
+    }
+
+    case 'LOAD_TEMPLATE_FUNDS': {
+      return {
+        ...state,
+        funds: TEMPLATE_FUNDS.map(f => ({ ...f })),
+        lastModified: Date.now()
+      }
+    }
+
+    case 'RESET_STATE': {
+      return {
+        ...DEFAULT_STATE,
+        lastModified: Date.now()
+      }
+    }
+
     case 'IMPORT_STATE':
       return { 
         ...DEFAULT_STATE, 
         ...action.state,
-        funds: action.state?.funds ? sanitizeFunds(action.state.funds) : DEFAULT_FUNDS,
+        funds: action.state?.funds ? sanitizeFunds(action.state.funds) : [],
         minLot: action.state?.minLot || 100,
         weeklyAmount: action.state?.weeklyAmount || 200,
         mfData: action.state?.mfData || {},
@@ -341,44 +366,65 @@ const PortfolioContext = createContext(null)
 export function PortfolioProvider({ children, user }) {
   const [state, dispatch] = useReducer(reducer, DEFAULT_STATE)
   const [isReady, setIsReady] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
 
-  // 1. Initial Load from Firebase (or migrate from localStorage)
+  // 1. Initial Load from Firebase (or user-scoped localStorage)
   useEffect(() => {
+    let isCancelled = false;
     async function initData() {
       if (!user) return;
       setIsReady(false);
-      const fbData = await fetchFromFirebase(user.uid);
-      
-      if (fbData) {
-        // User has data in Firebase, use it
-        dispatch({ type: 'IMPORT_STATE', state: fbData });
-      } else {
-        // No data in Firebase. 
-        // If this is the specific migration user AND local storage has data, migrate it.
-        const localData = loadFromStorage();
-        if (user.email === 'harshithsr20@gmail.com' && localData) {
-          console.log('Migrating local data to Firebase for harshithsr20@gmail.com');
-          dispatch({ type: 'IMPORT_STATE', state: localData });
-        } else if (localData) {
-          // Alternatively, always migrate local data to a new user account?
-          // We will do it for everyone just to be nice, but explicitly handling it.
-          dispatch({ type: 'IMPORT_STATE', state: localData });
+
+      try {
+        const fbData = await fetchFromFirebase(user.uid);
+        if (isCancelled) return;
+
+        if (fbData && fbData.funds !== undefined) {
+          // User has data in Firebase, use it
+          dispatch({ type: 'IMPORT_STATE', state: fbData });
+        } else {
+          // Check user-scoped local storage
+          const userLocalData = loadFromStorage(user.uid);
+          if (userLocalData && userLocalData.funds !== undefined) {
+            dispatch({ type: 'IMPORT_STATE', state: userLocalData });
+          } else if (user.email === 'harshithsr20@gmail.com') {
+            // One-time legacy migration for primary developer ONLY
+            try {
+              const legacyData = localStorage.getItem('portfolio-tracker-v1');
+              if (legacyData) {
+                const parsed = JSON.parse(legacyData);
+                if (parsed && Array.isArray(parsed.funds)) {
+                  console.log('Migrating legacy data for harshithsr20@gmail.com');
+                  dispatch({ type: 'IMPORT_STATE', state: parsed });
+                }
+              }
+            } catch (e) {}
+          } else {
+            // Brand new user: clean state with empty funds so they configure funds first
+            dispatch({ type: 'RESET_STATE' });
+          }
+        }
+      } catch (err) {
+        console.error('Error during data initialization:', err);
+      } finally {
+        if (!isCancelled) {
+          setIsReady(true);
         }
       }
-      setIsReady(true);
     }
+
     initData();
-  }, [user]);
+    return () => {
+      isCancelled = true;
+    };
+  }, [user?.uid]);
 
   // 2. Persist on every state change (after ready)
   useEffect(() => {
-    if (isReady && user) {
+    if (isReady && user?.uid) {
       saveToFirebase(user.uid, state);
-      // Also save to local storage as a fallback/cache
-      saveToStorage(state);
+      saveToStorage(user.uid, state);
     }
-  }, [state, isReady, user])
+  }, [state, isReady, user?.uid])
 
   if (!isReady) {
     return (

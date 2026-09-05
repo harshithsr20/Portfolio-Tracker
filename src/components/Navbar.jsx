@@ -2,11 +2,12 @@ import { usePortfolio, exportJSON, importJSON } from '../store/portfolioStore'
 import { useRef } from 'react'
 
 const tabs = [
-  { id: 'dashboard',  label: 'Dashboard',   code: '01' },
-  { id: 'allocator',  label: 'Allocator',   code: '02' },
-  { id: 'factsheets', label: 'Fact Sheets', code: '03' },
-  { id: 'aianalyzer', label: 'AI Analyzer', code: '04' },
-  { id: 'mfdata',     label: 'MF Data',     code: '05' }
+  { id: 'fundsetup',  label: 'Fund Setup',  code: '01' },
+  { id: 'dashboard',  label: 'Dashboard',   code: '02' },
+  { id: 'allocator',  label: 'Allocator',   code: '03' },
+  { id: 'factsheets', label: 'Fact Sheets', code: '04' },
+  { id: 'aianalyzer', label: 'AI Analyzer', code: '05' },
+  { id: 'mfdata',     label: 'MF Data',     code: '06' }
 ]
 
 export default function Navbar({ activePage, setActivePage }) {

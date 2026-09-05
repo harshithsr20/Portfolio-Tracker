@@ -67,8 +67,15 @@ export default function DriftTable({ enrichedFunds }) {
               </td>
             </tr>
           ))}
-        </tbody>
-      </table>
-    </div>
+          {enrichedFunds.length === 0 && (
+            <tr>
+              <td colSpan={5} className="ather-td text-center text-neutral-400 py-12 font-mono text-sm">
+                // NO ASSET CATEGORIES CONFIGURED YET.
+              </td>
+            </tr>
+          )}
+            </tbody>
+          </table>
+        </div>
   )
 }

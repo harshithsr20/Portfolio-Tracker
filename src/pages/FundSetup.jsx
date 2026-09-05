@@ -78,7 +78,7 @@ function FundRow({ fund, onChange, onRemove }) {
   )
 }
 
-export default function FundSetup() {
+export default function FundSetup({ onNavigateToDashboard }) {
   const { state, dispatch } = usePortfolio()
   const { funds, weeklyAmount = 200, minLot = 100, carryOver = 0 } = state
   const [saved, setSaved] = useState(false)
@@ -140,10 +140,28 @@ export default function FundSetup() {
     setSaved(false)
   }
 
-  function handleSave() {
+  function handleLoadTemplate() {
+    if (funds.length > 0 && !confirm('This will replace your current fund list with the standard 6-category starter template. Continue?')) {
+      return
+    }
+    dispatch({ type: 'LOAD_TEMPLATE_FUNDS' })
+    setSaved(false)
+  }
+
+  function handleResetAll() {
+    if (confirm('Are you sure you want to clear all funds and start with a blank list?')) {
+      dispatch({ type: 'CLEAR_ALL_FUNDS' })
+      setSaved(false)
+    }
+  }
+
+  function handleSave(andGoToDashboard = false) {
     dispatch({ type: 'SAVE_SNAPSHOT' })
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
+    if (andGoToDashboard && onNavigateToDashboard) {
+      onNavigateToDashboard()
+    }
   }
 
   // Auto-balance feature
@@ -185,24 +203,73 @@ export default function FundSetup() {
             </h2>
           </div>
           <p className="text-sm font-mono text-neutral-400 mt-1.5">
-            Configure ideal target weights and live holdings across your asset categories.
+            Configure your funds, current investment capital (₹), and target allocation percentages.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
           <button id="btn-add-fund" onClick={handleAdd} className="ather-btn-secondary">
             + Add Asset Category
           </button>
+          <button id="btn-template-fund" onClick={handleLoadTemplate} className="ather-btn-ghost text-xs">
+            ⚡ Load Starter Template
+          </button>
+          {funds.length > 0 && (
+            <button id="btn-clear-funds" onClick={handleResetAll} className="ather-btn-ghost text-xs text-rose-400 hover:text-rose-300">
+              ↺ Reset
+            </button>
+          )}
           <button
             id="btn-save-snapshot"
-            onClick={handleSave}
-            disabled={!isSumOk}
+            onClick={() => handleSave(false)}
+            disabled={!isSumOk || funds.length === 0}
             className="ather-btn-primary"
           >
             {saved ? '✓ SNAPSHOT RECORDED' : 'SAVE SNAPSHOT'}
           </button>
+          {funds.length > 0 && isSumOk && onNavigateToDashboard && (
+            <button
+              id="btn-save-continue"
+              onClick={() => handleSave(true)}
+              className="ather-btn-primary bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-500"
+            >
+              SAVE & GO TO DASHBOARD →
+            </button>
+          )}
         </div>
       </div>
+
+      {/* New User Welcome / Guidance Banner */}
+      {funds.length === 0 && (
+        <div className="p-6 rounded-2xl bg-neutral-950 border border-neutral-700/80 shadow-xl space-y-4">
+          <div className="flex items-start gap-4">
+            <div className="w-10 h-10 rounded-xl bg-emerald-950 border border-emerald-500/50 flex items-center justify-center text-emerald-400 text-xl font-mono flex-shrink-0">
+              👋
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-lg font-bold text-white font-display">
+                Welcome to Portfolio Tracker!
+              </h3>
+              <p className="text-sm font-mono text-neutral-300">
+                To start tracking your investments, add your mutual funds / asset categories below. For each category:
+              </p>
+              <ul className="text-xs font-mono text-neutral-400 space-y-1 pt-2 list-disc list-inside">
+                <li>Enter the <strong className="text-neutral-200">Asset Category Name</strong> (e.g. Nifty 50, Mid Cap, Small Cap, Gold, Stocks)</li>
+                <li>Enter your <strong className="text-neutral-200">Current Capital (₹)</strong> currently invested in that category</li>
+                <li>Set your ideal <strong className="text-neutral-200">Target Weight %</strong> (all targets must sum to 100%)</li>
+              </ul>
+            </div>
+          </div>
+          <div className="pt-2 flex items-center gap-3 flex-wrap border-t border-neutral-800">
+            <button onClick={handleAdd} className="ather-btn-primary text-xs py-2 px-4">
+              + Add First Asset Category
+            </button>
+            <button onClick={handleLoadTemplate} className="ather-btn-secondary text-xs py-2 px-4">
+              ⚡ Load Standard 6-Fund Template
+            </button>
+          </div>
+        </div>
+      )}
 
       {appliedMsg && (
         <div className="bg-neutral-900 border border-emerald-500/60 rounded-2xl p-4 text-sm font-mono text-white flex items-center justify-between gap-4 shadow-lg animate-fade-in">
@@ -215,15 +282,21 @@ export default function FundSetup() {
 
       {/* Status Bar */}
       <div className={`p-5 rounded-2xl border flex items-center justify-between flex-wrap gap-4 text-sm font-mono ${
-        isSumOk
+        funds.length === 0
+          ? 'bg-neutral-950 border-neutral-800 text-neutral-400'
+          : isSumOk
           ? 'bg-neutral-950 border-neutral-800 text-neutral-200 shadow-md'
           : 'bg-black border-neutral-700 text-neutral-300'
       }`}>
         <div className="flex items-center gap-3.5">
-          <span className={`w-3 h-3 rounded-full ${isSumOk ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+          <span className={`w-3 h-3 rounded-full ${funds.length === 0 ? 'bg-neutral-500' : isSumOk ? 'bg-emerald-400' : 'bg-rose-400'}`} />
           <span className="text-base">
             TARGET ALLOCATION SUM: <strong className="text-white text-lg font-bold">{targetSum.toFixed(1)}%</strong>
-            {isSumOk ? ' (PERFECTLY BALANCED)' : ` (DELTA: ${(100 - targetSum).toFixed(1)}%)`}
+            {funds.length === 0
+              ? ' (NO FUNDS ADDED YET)'
+              : isSumOk 
+              ? ' (PERFECTLY BALANCED)' 
+              : ` (DELTA: ${(100 - targetSum).toFixed(1)}%)`}
           </span>
         </div>
 
