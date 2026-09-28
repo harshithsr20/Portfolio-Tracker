@@ -168,7 +168,7 @@ export default function AiSettingsModal({ isOpen, onClose, onSave }) {
             </div>
 
             <p className="text-[11px] text-neutral-400 font-mono mt-2">
-              🔒 Key is saved locally in your browser's <code className="text-neutral-300">localStorage</code>. It is never transmitted anywhere except directly to Google / Groq.
+              🔒 Key from your <code className="text-neutral-300">.env</code> file is loaded automatically. You can also override it here if needed.
             </p>
           </div>
 
@@ -177,14 +177,15 @@ export default function AiSettingsModal({ isOpen, onClose, onSave }) {
             <div className="flex items-center justify-between">
               <span className="text-neutral-400">Current Status:</span>
               <span className={hasKey ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>
-                {hasKey ? '✓ Ready for Client-Side Vision' : '⚠️ Key Required for Analysis'}
+                {hasKey ? '✓ Active & Ready (.env loaded)' : '⚠️ Key Required for Analysis'}
               </span>
             </div>
             <div className="text-[11px] text-neutral-500">
-              Works 100% on GitHub Pages with zero server backend needed.
+              Vision analysis runs client-side directly from browser with zero manual key entry needed.
             </div>
           </div>
         </div>
+
 
         {/* Footer */}
         <div className="p-4 bg-neutral-950 border-t border-neutral-800 flex items-center justify-between">

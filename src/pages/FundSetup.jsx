@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react'
 import { usePortfolio } from '../store/portfolioStore'
-import { computeTargetSum, getFundColor, enrichFunds, formatCurrency } from '../utils/portfolio'
+import { computeTargetSum, getFundColor, enrichFunds, formatCurrency, computeTotalValue } from '../utils/portfolio'
 import { allocate } from '../utils/allocator'
 import { getWeeklyScheduleInfo } from '../utils/schedule'
+import CategoryAllocationAdjuster from '../components/CategoryAllocationAdjuster'
 
 function FundRow({ fund, onChange, onRemove }) {
+
   return (
     <tr className="hover:bg-neutral-900/60 transition-colors group">
       {/* Category Name */}
@@ -83,6 +85,7 @@ export default function FundSetup({ onNavigateToDashboard }) {
   const { funds, weeklyAmount = 200, minLot = 100, carryOver = 0 } = state
   const [saved, setSaved] = useState(false)
   const [appliedMsg, setAppliedMsg] = useState('')
+  const [activeView, setActiveView] = useState('calibrator') // 'calibrator' | 'table'
 
   const targetSum = computeTargetSum(funds)
   const isSumOk = Math.abs(targetSum - 100) < 0.01
@@ -239,6 +242,42 @@ export default function FundSetup({ onNavigateToDashboard }) {
         </div>
       </div>
 
+      {/* View Switcher: Interactive Calibrator vs Table */}
+      {funds.length > 0 && (
+        <div className="flex items-center justify-between flex-wrap gap-3 pb-1 border-b border-neutral-800/80">
+          <div className="flex items-center gap-2 p-1 bg-neutral-950 border border-neutral-800 rounded-xl shadow-inner">
+            <button
+              type="button"
+              onClick={() => setActiveView('calibrator')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-2 ${
+                activeView === 'calibrator'
+                  ? 'bg-white text-black shadow-md'
+                  : 'text-neutral-400 hover:text-white'
+              }`}
+            >
+              <span>🎛️</span>
+              <span>Interactive Calibrator (Sliders)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveView('table')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-mono font-bold transition-all flex items-center gap-2 ${
+                activeView === 'table'
+                  ? 'bg-white text-black shadow-md'
+                  : 'text-neutral-400 hover:text-white'
+              }`}
+            >
+              <span>📋</span>
+              <span>Spreadsheet Table</span>
+            </button>
+          </div>
+
+          <span className="text-xs font-mono text-neutral-400">
+            {activeView === 'calibrator' ? 'Drag sliders or click +/- step buttons to change %' : 'Edit details and values directly in tabular cells'}
+          </span>
+        </div>
+      )}
+
       {/* New User Welcome / Guidance Banner */}
       {funds.length === 0 && (
         <div className="p-6 rounded-2xl bg-neutral-950 border border-neutral-700/80 shadow-xl space-y-4">
@@ -280,81 +319,94 @@ export default function FundSetup({ onNavigateToDashboard }) {
         </div>
       )}
 
-      {/* Status Bar */}
-      <div className={`p-5 rounded-2xl border flex items-center justify-between flex-wrap gap-4 text-sm font-mono ${
-        funds.length === 0
-          ? 'bg-neutral-950 border-neutral-800 text-neutral-400'
-          : isSumOk
-          ? 'bg-neutral-950 border-neutral-800 text-neutral-200 shadow-md'
-          : 'bg-black border-neutral-700 text-neutral-300'
-      }`}>
-        <div className="flex items-center gap-3.5">
-          <span className={`w-3 h-3 rounded-full ${funds.length === 0 ? 'bg-neutral-500' : isSumOk ? 'bg-emerald-400' : 'bg-rose-400'}`} />
-          <span className="text-base">
-            TARGET ALLOCATION SUM: <strong className="text-white text-lg font-bold">{targetSum.toFixed(1)}%</strong>
-            {funds.length === 0
-              ? ' (NO FUNDS ADDED YET)'
-              : isSumOk 
-              ? ' (PERFECTLY BALANCED)' 
-              : ` (DELTA: ${(100 - targetSum).toFixed(1)}%)`}
-          </span>
-        </div>
+      {/* Main View: Interactive Calibrator vs Spreadsheet Table */}
+      {funds.length > 0 && activeView === 'calibrator' && (
+        <CategoryAllocationAdjuster
+          title="Category Target Weight Calibrator"
+          subtitle="Change and balance the percentage allocated to each fund category with live feedback."
+        />
+      )}
 
-        {!isSumOk && funds.length > 0 && (
-          <button
-            onClick={handleAutoBalance}
-            className="ather-btn-secondary text-xs py-2 px-4 bg-neutral-900 border-neutral-700 text-white hover:border-white"
-          >
-            Auto-balance remainder to {funds[funds.length - 1].name}
-          </button>
-        )}
-      </div>
-
-      {/* Editable Table */}
-      <div className="ather-card p-0">
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr>
-                <th className="ather-th">ASSET / FUND CATEGORY</th>
-                <th className="ather-th text-right">TARGET WEIGHT %</th>
-                <th className="ather-th text-right">CURRENT CAPITAL (₹)</th>
-                <th className="ather-th text-center">ACTION</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-800">
-              {funds.map(f => (
-                <FundRow
-                  key={f.id}
-                  fund={f}
-                  onChange={handleChange}
-                  onRemove={handleRemove}
-                />
-              ))}
-              {funds.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="ather-td text-center text-neutral-400 py-16 font-mono text-sm">
-                    // NO ASSET CATEGORIES DEFINED. CLICK "+ ADD ASSET CATEGORY" TO BEGIN.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Footer Summary */}
-        {funds.length > 0 && (
-          <div className="flex items-center justify-between px-7 py-5 bg-black border-t border-neutral-800 text-sm font-mono">
-            <span className="text-neutral-400 uppercase tracking-widest font-bold">TOTAL TARGET WEIGHT</span>
-            <div className="flex items-center gap-2.5">
-              <span className={`text-xl font-extrabold ${isSumOk ? 'text-white' : 'text-neutral-400'}`}>
-                {targetSum.toFixed(1)}%
+      {funds.length > 0 && activeView === 'table' && (
+        <>
+          {/* Status Bar */}
+          <div className={`p-5 rounded-2xl border flex items-center justify-between flex-wrap gap-4 text-sm font-mono ${
+            funds.length === 0
+              ? 'bg-neutral-950 border-neutral-800 text-neutral-400'
+              : isSumOk
+              ? 'bg-neutral-950 border-neutral-800 text-neutral-200 shadow-md'
+              : 'bg-black border-neutral-700 text-neutral-300'
+          }`}>
+            <div className="flex items-center gap-3.5">
+              <span className={`w-3 h-3 rounded-full ${funds.length === 0 ? 'bg-neutral-500' : isSumOk ? 'bg-emerald-400' : 'bg-rose-400'}`} />
+              <span className="text-base">
+                TARGET ALLOCATION SUM: <strong className="text-white text-lg font-bold">{targetSum.toFixed(1)}%</strong>
+                {funds.length === 0
+                  ? ' (NO FUNDS ADDED YET)'
+                  : isSumOk 
+                  ? ' (PERFECTLY BALANCED)' 
+                  : ` (DELTA: ${(100 - targetSum).toFixed(1)}%)`}
               </span>
-              <span className="text-neutral-500 text-base">/ 100.0%</span>
             </div>
+
+            {!isSumOk && funds.length > 0 && (
+              <button
+                onClick={handleAutoBalance}
+                className="ather-btn-secondary text-xs py-2 px-4 bg-neutral-900 border-neutral-700 text-white hover:border-white"
+              >
+                Auto-balance remainder to {funds[funds.length - 1].name}
+              </button>
+            )}
           </div>
-        )}
-      </div>
+
+          {/* Editable Table */}
+          <div className="ather-card p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr>
+                    <th className="ather-th">ASSET / FUND CATEGORY</th>
+                    <th className="ather-th text-right">TARGET WEIGHT %</th>
+                    <th className="ather-th text-right">CURRENT CAPITAL (₹)</th>
+                    <th className="ather-th text-center">ACTION</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-800">
+                  {funds.map(f => (
+                    <FundRow
+                      key={f.id}
+                      fund={f}
+                      onChange={handleChange}
+                      onRemove={handleRemove}
+                    />
+                  ))}
+                  {funds.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="ather-td text-center text-neutral-400 py-16 font-mono text-sm">
+                        // NO ASSET CATEGORIES DEFINED. CLICK "+ ADD ASSET CATEGORY" TO BEGIN.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Footer Summary */}
+            {funds.length > 0 && (
+              <div className="flex items-center justify-between px-7 py-5 bg-black border-t border-neutral-800 text-sm font-mono">
+                <span className="text-neutral-400 uppercase tracking-widest font-bold">TOTAL TARGET WEIGHT</span>
+                <div className="flex items-center gap-2.5">
+                  <span className={`text-xl font-extrabold ${isSumOk ? 'text-white' : 'text-neutral-400'}`}>
+                    {targetSum.toFixed(1)}%
+                  </span>
+                  <span className="text-neutral-500 text-base">/ 100.0%</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
 
       {/* ── Live Dynamic Allocation Recalculation Impact Box ── */}
       {funds.length > 0 && (

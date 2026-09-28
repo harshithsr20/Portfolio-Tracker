@@ -9,7 +9,18 @@ const STORAGE_KEY_GROQ = 'portfolio_tracker_groq_api_key'
 const STORAGE_KEY_PROVIDER = 'portfolio_tracker_ai_provider'
 
 export function getStoredProvider() {
-  return localStorage.getItem(STORAGE_KEY_PROVIDER) || 'gemini'
+  const stored = localStorage.getItem(STORAGE_KEY_PROVIDER)
+  if (stored && (stored === 'groq' || stored === 'gemini')) {
+    // If stored provider has no key but the other does, switch automatically
+    const keyForStored = getStoredApiKey(stored)
+    if (keyForStored) return stored
+  }
+  // Auto-detect which provider has an API key configured in .env or localStorage
+  const groqKey = localStorage.getItem(STORAGE_KEY_GROQ) || import.meta.env.VITE_GROQ_API_KEY || import.meta.env.GROQ_API_KEY
+  if (groqKey) return 'groq'
+  const geminiKey = localStorage.getItem(STORAGE_KEY_GEMINI) || import.meta.env.VITE_GEMINI_API_KEY || import.meta.env.GEMINI_API_KEY
+  if (geminiKey) return 'gemini'
+  return stored || 'groq'
 }
 
 export function setStoredProvider(provider) {
@@ -18,10 +29,21 @@ export function setStoredProvider(provider) {
 
 export function getStoredApiKey(provider = getStoredProvider()) {
   if (provider === 'gemini') {
-    return localStorage.getItem(STORAGE_KEY_GEMINI) || import.meta.env.VITE_GEMINI_API_KEY || ''
+    return (
+      localStorage.getItem(STORAGE_KEY_GEMINI) ||
+      import.meta.env.VITE_GEMINI_API_KEY ||
+      import.meta.env.GEMINI_API_KEY ||
+      ''
+    ).trim()
   }
-  return localStorage.getItem(STORAGE_KEY_GROQ) || import.meta.env.VITE_GROQ_API_KEY || ''
+  return (
+    localStorage.getItem(STORAGE_KEY_GROQ) ||
+    import.meta.env.VITE_GROQ_API_KEY ||
+    import.meta.env.GROQ_API_KEY ||
+    ''
+  ).trim()
 }
+
 
 export function setStoredApiKey(provider, key) {
   if (provider === 'gemini') {
@@ -364,11 +386,23 @@ Strictly return ONLY valid JSON matching this exact schema:
 export async function analyzeFactSheetWithVision({
   files,
   targetFund = 'auto',
-  provider = getStoredProvider(),
-  apiKey = getStoredApiKey(provider),
+  provider,
+  apiKey,
 }) {
   if (!files || files.length === 0) {
     throw new Error('Please select at least one fact sheet page image.')
+  }
+
+  let activeProvider = provider || getStoredProvider()
+  let activeApiKey = (apiKey || getStoredApiKey(activeProvider) || '').trim()
+
+  if (!activeApiKey) {
+    const altProvider = activeProvider === 'gemini' ? 'groq' : 'gemini'
+    const altKey = getStoredApiKey(altProvider)
+    if (altKey) {
+      activeProvider = altProvider
+      activeApiKey = altKey
+    }
   }
 
   // 1. Optimize images in browser canvas
@@ -379,10 +413,11 @@ export async function analyzeFactSheetWithVision({
   const systemPrompt = SYSTEM_PROMPT_TEMPLATE(targetFund)
 
   // 2. Client-side execution with Gemini API
-  if (provider === 'gemini' && apiKey) {
+  if (activeProvider === 'gemini' && activeApiKey) {
     try {
       // Try Gemini 1.5 Flash (or Gemini 2.0 Flash)
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey.trim()}`
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${activeApiKey}`
+
       
       const parts = [
         { text: systemPrompt },
@@ -429,7 +464,7 @@ export async function analyzeFactSheetWithVision({
   }
 
   // 3. Client-side execution with Groq API
-  if (provider === 'groq' && apiKey) {
+  if (activeProvider === 'groq' && activeApiKey) {
     try {
       const endpoint = 'https://api.groq.com/openai/v1/chat/completions'
       
@@ -445,7 +480,7 @@ export async function analyzeFactSheetWithVision({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey.trim()}`,
+          'Authorization': `Bearer ${activeApiKey}`,
         },
         body: JSON.stringify({
           model: 'llama-3.2-11b-vision-preview',

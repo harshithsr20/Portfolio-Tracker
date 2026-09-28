@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import { usePortfolio } from '../store/portfolioStore'
 import { enrichFunds, formatCurrency, computeTargetSum } from '../utils/portfolio'
 import { allocate } from '../utils/allocator'
@@ -7,10 +7,15 @@ import DonutChart from '../components/DonutChart'
 import AllocationBarChart from '../components/AllocationBarChart'
 import DriftTable from '../components/DriftTable'
 import DirectInvestCard from '../components/DirectInvestCard'
+import CategoryAllocationAdjuster from '../components/CategoryAllocationAdjuster'
+
 
 export default function Dashboard({ onNavigateToSetup }) {
   const { state } = usePortfolio()
   const { funds, carryOver, weeklyAmount = 200, minLot = 100 } = state
+  const [isAdjusterModalOpen, setIsAdjusterModalOpen] = useState(false)
+  const [showInlineCalibrator, setShowInlineCalibrator] = useState(false)
+
   const enriched = enrichFunds(funds)
   const totalValue = enriched[0]?.totalValue ?? 0
   const targetSum = computeTargetSum(funds)
@@ -46,6 +51,7 @@ export default function Dashboard({ onNavigateToSetup }) {
       fallbackUsed: res.fallbackUsed,
     }
   }, [funds, effectiveAmount, minLot, enriched, totalValue])
+
 
   return (
     <div className="space-y-8">
@@ -95,28 +101,56 @@ export default function Dashboard({ onNavigateToSetup }) {
         </div>
 
         {/* Target Allocation Health */}
-        <div className="ather-card border-neutral-700 bg-neutral-950/90 shadow-lg">
-          <div className="flex items-center justify-between text-neutral-400 font-mono text-xs uppercase tracking-widest mb-3">
-            <span className="font-bold">TARGET WEIGHT CALIBRATION</span>
-            <span className={isTargetValid ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
-              {isTargetValid ? '✓ 100% BALANCED' : '⚠️ MISALIGNED'}
-            </span>
+        <div className="ather-card border-neutral-700 bg-neutral-950/90 shadow-lg flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between text-neutral-400 font-mono text-xs uppercase tracking-widest mb-3">
+              <span className="font-bold">TARGET WEIGHT CALIBRATION</span>
+              <span className={isTargetValid ? 'text-emerald-400 font-bold' : 'text-rose-400 font-bold'}>
+                {isTargetValid ? '✓ 100% BALANCED' : '⚠️ MISALIGNED'}
+              </span>
+            </div>
+            <div className="flex items-baseline gap-3">
+              <span className="font-display font-extrabold text-3xl sm:text-4xl text-white">
+                {targetSum.toFixed(1)}%
+              </span>
+              <span className="text-sm font-mono text-neutral-400">/ 100% ALLOCATED</span>
+            </div>
+            
+            {/* Visual Target Bar */}
+            <div className="w-full bg-neutral-900 h-2.5 rounded-full overflow-hidden mt-5 border border-neutral-800">
+              <div
+                className={`h-full transition-all duration-300 ${isTargetValid ? 'bg-white' : 'bg-rose-500'}`}
+                style={{ width: `${Math.min(targetSum, 100)}%` }}
+              />
+            </div>
           </div>
-          <div className="flex items-baseline gap-3">
-            <span className="font-display font-extrabold text-3xl sm:text-4xl text-white">
-              {targetSum.toFixed(1)}%
-            </span>
-            <span className="text-sm font-mono text-neutral-400">/ 100% ALLOCATED</span>
-          </div>
-          
-          {/* Visual Target Bar */}
-          <div className="w-full bg-neutral-900 h-2.5 rounded-full overflow-hidden mt-5 border border-neutral-800">
-            <div
-              className={`h-full transition-all duration-300 ${isTargetValid ? 'bg-white' : 'bg-rose-500'}`}
-              style={{ width: `${Math.min(targetSum, 100)}%` }}
-            />
+
+          {/* Quick Action Buttons for Category Target % */}
+          <div className="mt-4 pt-3 border-t border-neutral-850 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsAdjusterModalOpen(true)}
+              className="flex-1 py-2 px-3 rounded-xl bg-neutral-900 hover:bg-neutral-850 border border-neutral-700 hover:border-emerald-500/80 text-xs font-mono font-bold text-neutral-200 hover:text-white flex items-center justify-center gap-2 transition-all shadow-sm group"
+              title="Open category percentage sliders modal"
+            >
+              <span className="text-emerald-400 group-hover:scale-110 transition-transform">⚡</span>
+              <span>Change Category %</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowInlineCalibrator(!showInlineCalibrator)}
+              className={`p-2 rounded-xl border text-xs font-mono transition-all ${
+                showInlineCalibrator
+                  ? 'bg-emerald-950 border-emerald-500/80 text-emerald-300 shadow-md'
+                  : 'bg-neutral-900 border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-600'
+              }`}
+              title={showInlineCalibrator ? 'Hide inline slider calibrator' : 'Toggle inline slider calibrator'}
+            >
+              🎛️
+            </button>
           </div>
         </div>
+
 
         {/* Next Saturday Investment Cadence Card */}
         <div className="ather-card border-neutral-700 bg-neutral-950/90 shadow-lg flex flex-col justify-between">
@@ -164,13 +198,39 @@ export default function Dashboard({ onNavigateToSetup }) {
 
       {/* Target Sum Warning */}
       {!isTargetValid && (
-        <div className="bg-black border border-rose-800/80 rounded-2xl p-5 flex items-center justify-between gap-4 text-sm font-mono text-rose-300">
+        <div className="bg-black border border-rose-800/80 rounded-2xl p-5 flex items-center justify-between gap-4 flex-wrap text-sm font-mono text-rose-300 shadow-xl">
           <div className="flex items-center gap-3">
             <span className="text-xl">⚠️</span>
             <span>
-              Target allocations sum to <strong className="text-white font-bold">{targetSum.toFixed(1)}%</strong>.
+              Target allocations sum to <strong className="text-white font-bold">{targetSum.toFixed(1)}%</strong>. All targets must sum to 100%.
             </span>
           </div>
+          <button
+            type="button"
+            onClick={() => setIsAdjusterModalOpen(true)}
+            className="ather-btn-secondary text-xs py-1.5 px-3.5 bg-rose-950/60 border-rose-700/80 text-rose-200 hover:bg-rose-900/80 font-bold"
+          >
+            ⚡ Calibrate Targets Now
+          </button>
+        </div>
+      )}
+
+      {/* Inline Category Target Allocation Calibrator (Expandable) */}
+      {showInlineCalibrator && (
+        <div className="animate-fade-in relative">
+          <div className="absolute top-4 right-4 z-10">
+            <button
+              onClick={() => setShowInlineCalibrator(false)}
+              className="px-2.5 py-1 rounded-lg bg-neutral-900 border border-neutral-700 text-neutral-400 hover:text-white text-xs font-mono"
+              title="Close inline calibrator"
+            >
+              ✕ Close Panel
+            </button>
+          </div>
+          <CategoryAllocationAdjuster
+            title="Live Category Target Allocation Calibrator"
+            subtitle="Changes instantly recalculate all radial charts, drift analysis, and Saturday investment targets below."
+          />
         </div>
       )}
 
@@ -224,6 +284,15 @@ export default function Dashboard({ onNavigateToSetup }) {
       {/* Manual Deposit: Add money by selecting fund */}
       <DirectInvestCard />
 
+      {/* Category Allocation Modal */}
+      {isAdjusterModalOpen && (
+        <CategoryAllocationAdjuster
+          isModal={true}
+          onClose={() => setIsAdjusterModalOpen(false)}
+        />
+      )}
+
     </div>
   )
 }
+

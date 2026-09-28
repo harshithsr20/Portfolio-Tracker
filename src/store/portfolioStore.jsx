@@ -182,6 +182,15 @@ function reducer(state, action) {
       return { ...state, funds, lastModified: Date.now() }
     }
 
+    case 'SET_TARGET_PERCENTAGES': {
+      const funds = state.funds.map(f =>
+        action.targets && action.targets[f.id] !== undefined
+          ? { ...f, targetPct: Number(action.targets[f.id]) || 0 }
+          : f
+      )
+      return { ...state, funds, lastModified: Date.now() }
+    }
+
     case 'ADD_TO_FUND': {
       const amount = Number(action.amount) || 0
       const funds = state.funds.map(f =>

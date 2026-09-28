@@ -208,15 +208,16 @@ export default function FactSheetUploader({ funds, onNavigateToMfData, preselect
             className={`px-3 py-1.5 text-xs font-mono rounded-lg border transition-all flex items-center gap-1.5 ${
               hasApiKey
                 ? 'bg-emerald-950/50 border-emerald-500/60 text-emerald-300 hover:bg-emerald-900/60'
-                : 'bg-amber-950/40 border-amber-500/60 text-amber-300 hover:bg-amber-900/60 animate-pulse'
+                : 'bg-neutral-900 border-neutral-700 text-neutral-400 hover:text-white'
             }`}
-            title="Configure Vision AI Provider & API Key"
+            title="Vision AI Provider & API Key Status"
           >
             <span>{hasApiKey ? '⚡' : '⚙️'}</span>
             <span className="font-bold uppercase tracking-wider">
-              {hasApiKey ? `${currentProvider === 'gemini' ? 'Gemini' : 'Groq'} Ready` : 'Configure AI Key'}
+              {hasApiKey ? `${currentProvider === 'gemini' ? 'Gemini' : 'Groq'} AI Active` : 'Configure AI Key'}
             </span>
           </button>
+
 
           <select 
             value={targetFund} 

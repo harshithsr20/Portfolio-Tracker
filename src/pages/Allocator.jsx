@@ -6,11 +6,14 @@ import { getWeeklyScheduleInfo } from '../utils/schedule'
 import AllocationResult from '../components/AllocationResult'
 import DirectInvestCard from '../components/DirectInvestCard'
 import WeeklyScheduleBanner from '../components/WeeklyScheduleBanner'
+import CategoryAllocationAdjuster from '../components/CategoryAllocationAdjuster'
 
 export default function Allocator({ onNavigateToSetup }) {
   const { state, dispatch } = usePortfolio()
   const { funds, carryOver, weeklyAmount = 200, minLot = 100, weeklyInvestments = {} } = state
+  const [isAdjusterOpen, setIsAdjusterOpen] = useState(false)
   const enriched = enrichFunds(funds)
+
 
   const schedule = getWeeklyScheduleInfo()
   const isInvested = Boolean(weeklyInvestments[schedule.cycleKey])
@@ -94,11 +97,21 @@ export default function Allocator({ onNavigateToSetup }) {
                 </span>
               </div>
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAdjusterOpen(true)}
+                  className="ather-btn-secondary text-xs py-1 px-3 bg-neutral-900 border-neutral-700 hover:border-emerald-500 text-neutral-300 hover:text-white flex items-center gap-1.5 font-mono"
+                  title="Fine-tune category target percentages"
+                >
+                  <span className="text-emerald-400">⚡</span>
+                  <span>Adjust Category %</span>
+                </button>
                 <span className="text-xs font-mono px-2.5 py-1 rounded-md bg-neutral-900 border border-neutral-800 text-emerald-400 font-bold">
                   ₹{effectiveAmount} DEPLOYMENT
                 </span>
               </div>
             </div>
+
 
             <AllocationResult
               result={result}
@@ -135,7 +148,16 @@ export default function Allocator({ onNavigateToSetup }) {
       {/* ── Section 3: Add Money to a Fund ── */}
       <DirectInvestCard />
 
+      {/* Category Target % Calibrator Modal */}
+      {isAdjusterOpen && (
+        <CategoryAllocationAdjuster
+          isModal={true}
+          onClose={() => setIsAdjusterOpen(false)}
+        />
+      )}
+
     </div>
   )
 }
+
 
