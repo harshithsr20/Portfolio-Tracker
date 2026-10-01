@@ -86,18 +86,19 @@ export default function DirectInvestCard() {
               <label htmlFor="manual-amount" className="text-xs font-mono text-neutral-300 uppercase font-bold block">
                 2. AMOUNT TO INVEST (₹)
               </label>
-              <span className="text-[11px] font-mono text-neutral-400">INCREMENTS OF ₹100</span>
+              <span className="text-[11px] font-mono text-neutral-400">ENTER ANY AMOUNT</span>
             </div>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 font-mono text-base font-bold pointer-events-none">₹</span>
               <input
                 id="manual-amount"
                 type="number"
-                min="100"
-                step="100"
+                min="0.01"
+                step="any"
+                placeholder="Enter amount"
                 className="ather-input pl-9 text-lg font-bold text-white py-2.5"
                 value={amount}
-                onChange={e => setAmount(Math.max(0, parseFloat(e.target.value) || 0))}
+                onChange={e => setAmount(e.target.value)}
                 required
               />
             </div>
@@ -114,7 +115,7 @@ export default function DirectInvestCard() {
               type="button"
               onClick={() => setAmount(preset)}
               className={`px-3 py-1 rounded-lg text-xs font-mono font-bold transition-all ${
-                amount === preset
+                Number(amount) === preset
                   ? 'bg-white text-black'
                   : 'bg-neutral-900 text-neutral-300 hover:text-white border border-neutral-800 hover:border-neutral-600'
               }`}
@@ -127,13 +128,13 @@ export default function DirectInvestCard() {
         {/* Submit Button */}
         <button
           type="submit"
-          disabled={!selectedFundId || amount <= 0}
+          disabled={!selectedFundId || !amount || Number(amount) <= 0}
           className="ather-btn-primary w-full py-3.5 text-sm font-bold tracking-wider"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 4v16m8-8H4" />
           </svg>
-          <span>INVEST {formatCurrency(amount)} INTO {selectedFund?.name?.toUpperCase()}</span>
+          <span>INVEST {formatCurrency(Number(amount) || 0)} INTO {selectedFund?.name?.toUpperCase()}</span>
         </button>
       </form>
     </div>

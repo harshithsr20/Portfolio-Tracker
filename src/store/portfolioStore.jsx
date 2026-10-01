@@ -265,7 +265,7 @@ function reducer(state, action) {
     }
 
     case 'SET_WEEKLY_AMOUNT':
-      return { ...state, weeklyAmount: Math.max(100, Number(action.amount) || 200), lastModified: Date.now() }
+      return { ...state, weeklyAmount: Math.max(1, Number(action.amount) || 200), lastModified: Date.now() }
 
     case 'SET_MIN_LOT':
       return { ...state, minLot: Math.max(10, Number(action.minLot) || 100), lastModified: Date.now() }

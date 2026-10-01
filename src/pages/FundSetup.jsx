@@ -55,7 +55,7 @@ function FundRow({ fund, onChange, onRemove }) {
             id={`fund-value-${fund.id}`}
             type="number"
             min="0"
-            step="100"
+            step="any"
             className="ather-input pl-9 font-bold text-white text-right text-base focus:border-emerald-400"
             value={fund.currentValue}
             onChange={e => onChange(fund.id, 'currentValue', parseFloat(e.target.value) || 0)}

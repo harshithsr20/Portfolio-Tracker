@@ -66,8 +66,8 @@ export default function WeeklyScheduleBanner({
               <span className="text-sm font-mono font-bold text-neutral-400">₹</span>
               <input 
                 type="number"
-                min="100"
-                step="100"
+                min="1"
+                step="any"
                 value={weeklyAmount}
                 onChange={(e) => onAmountChange(Number(e.target.value))}
                 className="w-20 bg-neutral-900 border border-neutral-700 rounded-lg px-2 py-1 text-sm font-mono font-bold text-white text-right focus:outline-none focus:border-emerald-400"
